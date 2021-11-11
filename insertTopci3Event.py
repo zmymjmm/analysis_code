@@ -12,6 +12,18 @@ def replaceSpace(s):
             l[i] = '_'
     return ''.join(l)
 
+#  连接数据库
+def connect(logger):
+    conn = pymysql.connect(
+        host='172.16.39.128',
+        user='root',
+        password='123456',
+        db='alienvault_siem',
+        charset='utf8'
+    )
+    return conn
+
+
 def readAndInsert(logger):
     # 从ELK提取数据
     es = Elasticsearch(
@@ -136,49 +148,46 @@ def readAndInsert(logger):
     df = df[['id', 'time', 'event_type', 'src_ip', 'dest_ip', 'killline']]
     # print(df[['time', 'event_type', 'killline']])
 
-    # 连接数据库
-    try:
-        conn = pymysql.connect(
-            host='172.16.39.128',
-            user='root',
-            password='123456',
-            db='alienvault_siem',
-            charset='utf8'
-        )
-        cursor = conn.cursor()
-        logger.info('Successful connect the database')
-
-        sqlbl = "select max(id) from topic3_event"
+    # 重复连接数据库，直到数据库连接成功才进行下一步操作
+    while 1 == 1:
         try:
-            # 执行SQL语句
-            cursor.execute(sqlbl)
-            # 获取所有记录列表
-            results = cursor.fetchall()
-            for row in results:
-                maxId = row[0]
-                print(maxId)
+            conn = connect(logger)
+            cursor = conn.cursor()
+            logger.info('Successful connect the database')
+            break
         except:
-            print("Error: unable to find maxId")
+            logger.info('reconnect the database')
 
-        # 往topic3_event表插入数据
-        # topic3_event表初始无数据时，maxId初始化为0
-        if maxId is None:
-            maxId = 0
-        id = maxId + 1
-        lst = df.values.tolist()
-        for i in lst:
-            sqlbl = "INSERT INTO topic3_event(id,attack_time,time,logstr,src_ip,dst_ip) values(%s,'%s','%s','%s','%s','%s')" % (
+
+
+    sqlbl = "select max(id) from topic3_event"
+    try:
+        # 执行SQL语句
+        cursor.execute(sqlbl)
+        # 获取所有记录列表
+        results = cursor.fetchall()
+        for row in results:
+            maxId = row[0]
+            print(maxId)
+    except:
+        print("Error: unable to find maxId")
+
+    # 往topic3_event表插入数据
+    # topic3_event表初始无数据时，maxId初始化为0
+    if maxId is None:
+        maxId = 0
+    id = maxId + 1
+    lst = df.values.tolist()
+    for i in lst:
+        sqlbl = "INSERT INTO topic3_event(id,attack_time,time,logstr,src_ip,dst_ip) values(%s,'%s','%s','%s','%s','%s')" % (
             id + int(i[0]),
             str(i[1]), str(i[1]), str(i[2]), str(i[3]), str(i[4]))
-            cursor.execute(sqlbl)
-            conn.commit()
-            # print('Success insert a record!')
+        cursor.execute(sqlbl)
+        conn.commit()
+        # print('Success insert a record!')
 
-        cursor.close()
-        conn.close()
-
-    except:
-        logger.info('fail connect the database')
+    cursor.close()
+    conn.close()
 
 
 
