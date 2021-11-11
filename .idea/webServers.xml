@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="3badf94e-133b-4dc3-94b5-fe3907217d71" name="DELL (1)">
+        <fileTransfer accessType="SFTP" host="10.112.254.160" port="61205" sshConfigId="6d45ceb5-4dbe-4ad9-ab79-a85ff4d2b988" sshConfig="zmy@10.112.254.160:61205 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+    <groups>
+      <group>
+        <name>DELL</name>
+        <servers>
+          <name value="DELL (1)" />
+        </servers>
+      </group>
+    </groups>
+  </component>
+</project>

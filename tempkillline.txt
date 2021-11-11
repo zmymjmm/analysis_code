@@ -1,0 +1,5 @@
+A_Network_Trojan_was_detected level:1,Trojan Attack
+Attempted_Information_Leak level:2,Leak Attack
+Potential_Corporate_Privacy_Violation level:2,Violation Attack
+Generic_Protocol_Command_Decode level:3,Decode Attack
+Not_Suspicious_Traffic level:3,Traffic Attack
