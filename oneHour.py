@@ -12,5 +12,6 @@ logger = logging.getLogger(__name__)
 
 while 1 == 1:
     time.sleep(second)
-    readAndInsert()
+    readAndInsert(logger)
     logger.info("insert success!")
+    logger.info('__________________________hour_over__________________________')

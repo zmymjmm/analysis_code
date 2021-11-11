@@ -12,7 +12,7 @@ def replaceSpace(s):
             l[i] = '_'
     return ''.join(l)
 
-def readAndInsert():
+def readAndInsert(logger):
     # 从ELK提取数据
     es = Elasticsearch(
         ['10.112.254.160'],  # 连接集群，以列表的形式存放节点的ip地址
@@ -21,15 +21,15 @@ def readAndInsert():
         use_ssl=True,
         verify_certs=False    # 忽略elasticsearch引发证书验证失败的SSL错误
     )
-    print(es.info())
-    print(es.ping())
+    # print(es.info())
+    logger.info(es.ping())
 
     # base日期(2021-11-08)和其对应的索引后缀
     base_index = 13
     # 获取前一天时间yes_day
     now_time = datetime.datetime.now()
     yes_time = (now_time+datetime.timedelta(days=-1)).strftime("%Y.%m.%d")
-    print("前一天日期:", yes_time)
+    logger.info("yes_day is %s" % yes_time)
     # 获取索引后缀index
     # 计算前一天和base日期的天数差值
     now_str = now_time.strftime('%Y-%m-%d')
@@ -37,7 +37,7 @@ def readAndInsert():
     base = datetime.datetime.strptime("2021-11-08", "%Y-%m-%d")
     dis = (now - base).days - 1
     index = str(base_index + dis).zfill(6)
-    print("索引后缀:", index)
+    logger.info("index is %s" % index)
 
     # 控制时间间隔，为1个小时
     utc = datetime.datetime.utcnow()
@@ -73,7 +73,6 @@ def readAndInsert():
     )
 
     total = response['hits']['total']
-    print(total)
 
     # 先将数据存储到字典
     res_dict = {"id" : "value", "time" : "value1", "src_ip" : "value2", "src_port" : "value3", "dest_ip" : "value4", "dest_port" : "value5", "event_type" : "value6", "killline": "value7"}
@@ -129,9 +128,8 @@ def readAndInsert():
     res_dict["event_type"] = event_type
     res_dict["killline"] = killline
     # print(res_dict)
-    print(num)  # 读取的总条数
+    logger.info(num)  # 读取的总条数
 
-    print("--------------------------------------")
     # 用pandas读取字典
     pd.set_option('display.max_rows', None)
     df = pd.DataFrame(res_dict)
@@ -139,41 +137,49 @@ def readAndInsert():
     # print(df[['time', 'event_type', 'killline']])
 
     # 连接数据库
-    conn = pymysql.connect(
-        host = '172.16.39.128',
-        user = 'root',
-        password = '123456',
-        db = 'alienvault_siem',
-        charset= 'utf8'
-    )
-    cursor = conn.cursor()
-    print('Successful connect the database')
-
-    sqlbl = "select max(id) from topic3_event"
     try:
-       # 执行SQL语句
-       cursor.execute(sqlbl)
-       # 获取所有记录列表
-       results = cursor.fetchall()
-       for row in results:
-          maxId = row[0]
-          print(maxId)
+        conn = pymysql.connect(
+            host='172.16.39.128',
+            user='root',
+            password='123456',
+            db='alienvault_siem',
+            charset='utf8'
+        )
+        cursor = conn.cursor()
+        logger.info('Successful connect the database')
+
+        sqlbl = "select max(id) from topic3_event"
+        try:
+            # 执行SQL语句
+            cursor.execute(sqlbl)
+            # 获取所有记录列表
+            results = cursor.fetchall()
+            for row in results:
+                maxId = row[0]
+                print(maxId)
+        except:
+            print("Error: unable to find maxId")
+
+        # 往topic3_event表插入数据
+        # topic3_event表初始无数据时，maxId初始化为0
+        if maxId is None:
+            maxId = 0
+        id = maxId + 1
+        lst = df.values.tolist()
+        for i in lst:
+            sqlbl = "INSERT INTO topic3_event(id,attack_time,time,logstr,src_ip,dst_ip) values(%s,'%s','%s','%s','%s','%s')" % (
+            id + int(i[0]),
+            str(i[1]), str(i[1]), str(i[2]), str(i[3]), str(i[4]))
+            cursor.execute(sqlbl)
+            conn.commit()
+            # print('Success insert a record!')
+
+        cursor.close()
+        conn.close()
+
     except:
-       print("Error: unable to find maxId")
+        logger.info('fail connect the database')
 
-    # 往topic3_event表插入数据
-    # topic3_event表初始无数据时，maxId初始化为0
-    if maxId is None:
-        maxId = 0
-    id = maxId + 1
-    lst = df.values.tolist()
-    for i in lst:
-        sqlbl = "INSERT INTO topic3_event(id,attack_time,time,logstr,src_ip,dst_ip) values(%s,'%s','%s','%s','%s','%s')" % (id + int(i[0]),
-        str(i[1]), str(i[1]), str(i[2]), str(i[3]), str(i[4]))
-        cursor.execute(sqlbl)
-        conn.commit()
-        # print('Success insert a record!')
 
-    cursor.close()
-    conn.close()
+
 
