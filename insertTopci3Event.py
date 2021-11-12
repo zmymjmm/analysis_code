@@ -1,6 +1,7 @@
 import datetime
 import pymysql
 from elasticsearch import Elasticsearch
+from dbConnect import *
 import pandas as pd
 
 
@@ -11,18 +12,6 @@ def replaceSpace(s):
         if l[i] == ' ':
             l[i] = '_'
     return ''.join(l)
-
-#  连接数据库
-def connect(logger):
-    conn = pymysql.connect(
-        host='172.16.39.128',
-        user='root',
-        password='123456',
-        db='alienvault_siem',
-        charset='utf8'
-    )
-    return conn
-
 
 def readAndInsert(logger):
     # 从ELK提取数据
@@ -157,8 +146,6 @@ def readAndInsert(logger):
             break
         except:
             logger.info('reconnect the database')
-
-
 
     sqlbl = "select max(id) from topic3_event"
     try:
