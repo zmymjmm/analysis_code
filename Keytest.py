@@ -1,6 +1,7 @@
 import pandas as pd
 from dbConnect import *
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -17,10 +18,16 @@ def get_ass():
             logger.info('reconnect the database')
 
     begin_time = "2021-11-11"
-    end_time = "2021-11-12"
+    end_time = "2021-11-11"
     sqlbl = "select id,time,logstr,src_ip,dst_ip from topic3_event where time between '%s' and '%s'" % (begin_time, end_time)
     df = pd.read_sql_query(sqlbl, con=conn)
     return df
+
+# 获取文件大小，以MB为单位
+def get_FileSize(filePath):
+    fsize = os.path.getsize(filePath)
+    fsize = fsize/float(1024*1024)
+    return round(fsize, 2)
 
 
 def init_matrix(path):
@@ -65,6 +72,14 @@ if __name__ == '__main__':
     Matrix_tmp = init_matrix(path)  # 初始化一个全为0的矩阵
 
     data = get_ass()
+    # 将告警日志数据转化为csv，用于判断其大小
+    data.to_csv("./result/data.csv", index_label="dataId")
+    logSize = get_FileSize('./result/data.csv')
+    logger.info("IDS log size is %.2f" % logSize)
+    if logSize > 500:
+        logger.info("IDS log size is too large! Can't analysis!")
+        exit(0)
+
     for indexs in data.index[0:-1]:
         # print(indexs)
         rows_f = data.loc[indexs].values
